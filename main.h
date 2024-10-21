@@ -8,6 +8,6 @@ typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
 
-} Main;
+} Game;
 
 #endif

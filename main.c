@@ -1,41 +1,44 @@
-#include <stdio.h> 
-#include <SDL2/SDL.h>
+#include "main.h"
 
 int processEvents(SDL_Window *window);
 void doRender(SDL_Renderer *renderer);
 int doPhysics();
+void quit(Game game);
 
 int main(int argc, char *argv[]) {
-
-    SDL_Window *window = NULL;
-    SDL_Renderer *renderer = NULL;
+    Game game;
+    game.window = NULL;
+    game.renderer = NULL;
 
     SDL_Init(SDL_INIT_VIDEO);
     
-    window = SDL_CreateWindow("Paper Airplane Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
-    if (window == NULL) {
-        printf("Could not create window. Error: %s", SDL_GetError()); 
+    game.window = SDL_CreateWindow("Paper Airplane Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
+    if (game.window == NULL) {
+        printf("Could not create game.window. Error: %s", SDL_GetError()); 
         return -1;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (renderer == NULL) {
+    game.renderer = SDL_CreateRenderer(game.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (game.renderer == NULL) {
         printf("Could not create renderer. Error: %s", SDL_GetError()); 
         return -1;
     }
 
     int running = 1;
     while (running) {
-        running = processEvents(window);
-        doRender(renderer);   
+        running = processEvents(game.window);
+        doRender(game.renderer);   
     }
 
+    quit(game);
+}
 
-    SDL_DestroyWindow(window);
-    SDL_DestroyRenderer(renderer);
+void quit(Game game) {
+    SDL_DestroyWindow(game.window);
+    SDL_DestroyRenderer(game.renderer);
 
     SDL_Quit();
-    return 0;
+    exit(0);
 }
 
 void doRender(SDL_Renderer *renderer) {
