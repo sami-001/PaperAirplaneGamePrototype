@@ -1,9 +1,10 @@
 #include "main.h"
 
-int processEvents(SDL_Window *window);
-void doRender(SDL_Renderer *renderer);
-int doPhysics();
-void quit(Game game);
+int processEvents(Game *game);
+void doRender(Game *game);
+int loadGame();
+void doPhysics(Game *game);
+void quit(Game *game);
 
 int main(int argc, char *argv[]) {
     Game game;
@@ -24,40 +25,78 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    int running = 1;
-    while (running) {
-        running = processEvents(game.window);
-        doRender(game.renderer);   
+
+    // Move to loadGame()
+    game.paper_plane.x = 66;
+    game.paper_plane.y = 141;
+
+
+    int isRunning = 1;
+    while (isRunning) {
+        isRunning = processEvents(&game);
+        doPhysics(&game);
+        doRender(&game);   
     }
 
-    quit(game);
+    quit(&game);
 }
 
-void quit(Game game) {
-    SDL_DestroyWindow(game.window);
-    SDL_DestroyRenderer(game.renderer);
+void quit(Game *game) {
+    SDL_DestroyWindow(game->window);
+    SDL_DestroyRenderer(game->renderer);
 
     SDL_Quit();
     exit(0);
 }
 
-void doRender(SDL_Renderer *renderer) {
+void doPhysics(Game *game) {
+    
+    //AirPlane Movement Calculations
+    game->paper_plane.dy = mouse_y - game->paper_plane.y;
+    game->paper_plane.dx = mouse_x - game->paper_plane.x;
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 225);
-    SDL_RenderClear(renderer);
+    if (game->paper_plane.dx != 0) {
+        game->paper_plane.x += game->paper_plane.dx / 10;
+    }
+    else {
+        game->paper_plane.dx = 0;
+    }
 
-    SDL_RenderPresent(renderer);
+    if (game->paper_plane.dy != 0) {
+        game->paper_plane.y += game->paper_plane.dy / 10;
+    }
+    else {
+        game->paper_plane.dy = 0;
+    }
 }
 
-int processEvents(SDL_Window *window) {
-    int running = 1;
+void doRender(Game *game) {
+
+    SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 225);
+    SDL_RenderClear(game->renderer);
+
+    //Render AirPlane
+    SDL_SetRenderDrawColor(game->renderer, 225, 225, 255, 225);
+    SDL_RenderDrawPoint(game->renderer, game->paper_plane.x, game->paper_plane.y);
+
+    SDL_RenderPresent(game->renderer);
+}
+
+int processEvents(Game *game) {
+    int isRunning = 1;
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
-        switch (e.type) 
-        case SDL_QUIT:
-            running = 0;
-            break;
+
+        if (e.type == SDL_QUIT) {
+            isRunning = 0;
+        }
+
+        if (e.type == SDL_MOUSEMOTION) {
+            SDL_GetMouseState(&mouse_x, &mouse_y);
+            printf("%d, %d\n", mouse_x, mouse_y);
+        }
+
     }
-    return running;
+    return isRunning;
 
 }
