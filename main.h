@@ -2,7 +2,10 @@
 #define MAIN_H 
 
 #include <stdio.h>
+#include <string.h>
+
 #include <SDL2/SDL.h> 
+#include <SDL2/SDL_image.h>
 
 typedef struct {
     int x;
@@ -10,6 +13,8 @@ typedef struct {
 
     int dx;
     int dy;
+
+    SDL_Texture *textrue;
 } PaperAirPlane;
 
 

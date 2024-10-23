@@ -2,34 +2,15 @@
 
 int processEvents(Game *game);
 void doRender(Game *game);
-int loadGame();
+void init(Game *game);
 void doPhysics(Game *game);
 void quit(Game *game);
+SDL_Texture *loadTexture(Game *game, const char texture_path[128]);
 
 int main(int argc, char *argv[]) {
     Game game;
-    game.window = NULL;
-    game.renderer = NULL;
 
-    SDL_Init(SDL_INIT_VIDEO);
-    
-    game.window = SDL_CreateWindow("Paper Airplane Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
-    if (game.window == NULL) {
-        printf("Could not create game.window. Error: %s", SDL_GetError()); 
-        return -1;
-    }
-
-    game.renderer = SDL_CreateRenderer(game.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (game.renderer == NULL) {
-        printf("Could not create renderer. Error: %s", SDL_GetError()); 
-        return -1;
-    }
-
-
-    // Move to loadGame()
-    game.paper_plane.x = 66;
-    game.paper_plane.y = 141;
-
+    init(&game);
 
     int isRunning = 1;
     while (isRunning) {
@@ -44,9 +25,50 @@ int main(int argc, char *argv[]) {
 void quit(Game *game) {
     SDL_DestroyWindow(game->window);
     SDL_DestroyRenderer(game->renderer);
+    game->window = NULL;
+    game->renderer = NULL;
 
+    SDL_DestroyTexture(game->paper_plane.textrue);
+    game->paper_plane.textrue = NULL;
+
+    IMG_Quit();
     SDL_Quit();
     exit(0);
+}
+
+void init(Game *game) {
+
+    game->window = NULL;
+    game->renderer = NULL;
+
+    SDL_Init(SDL_INIT_VIDEO);
+    
+    //                                   TODO: Enhance error detection                              //
+
+    game->window = SDL_CreateWindow("Paper Airplane Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
+    if (game->window == NULL) {
+        printf("Could not create game.window. Error: %s", SDL_GetError()); 
+        exit(-1);
+    }
+
+    game->renderer = SDL_CreateRenderer(game->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (game->renderer == NULL) {
+        printf("Could not create renderer. Error: %s", SDL_GetError()); 
+        exit(-1);
+    }
+    //Init airplane position
+    game->paper_plane.x = 66;
+    game->paper_plane.y = 141;
+
+//    loadTexture(game, "/assets/textures/");
+}
+
+SDL_Texture *loadTexture(Game *game, const char texture_path[128]) {
+    SDL_Texture *new_texture = NULL;
+
+    new_texture = IMG_LoadTexture(game->renderer, texture_path); 
+    
+    return new_texture;
 }
 
 void doPhysics(Game *game) {
