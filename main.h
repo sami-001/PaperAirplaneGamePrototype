@@ -7,14 +7,34 @@
 #include <SDL2/SDL.h> 
 #include <SDL2/SDL_image.h>
 
+const int WINDOW_HEIGHT = 960;
+const int WINDOW_WIDTH = 1440;
+
+
+SDL_Point mouse;
+
+float plane_mouse_distance_x; 
+float plane_mouse_distance_y;
+
 typedef struct {
     int x;
     int y;
 
-    int dx;
-    int dy;
+    float dx;
+    float dy;
+    
+    float friction;
 
-    SDL_Texture *textrue;
+    //Texture
+    SDL_Texture *texture;
+    int texture_w;
+    int texture_h;
+    SDL_Rect rect; 
+
+    //States
+    int is_picked;
+    int is_thrown;
+
 } PaperAirPlane;
 
 
@@ -23,10 +43,13 @@ typedef struct {
     SDL_Renderer *renderer;
 
     PaperAirPlane paper_plane;
+
 } Game;
 
-int mouse_x;
-int mouse_y;
-
+int processEvents(Game *game);
+void doRender(Game *game);
+void init(Game *game);
+void doPhysics(Game *game);
+void quit(Game *game);
 
 #endif
