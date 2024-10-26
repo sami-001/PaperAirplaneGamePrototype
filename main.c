@@ -99,7 +99,7 @@ void doPhysics(Game *game) {
         //game->paper_plane.dx *= -1;
     }
     else if (game->paper_plane.y+game->paper_plane.texture_h/2 > WINDOW_HEIGHT) { //Bottom edge
-        game->paper_plane.y = WINDOW_HEIGHT - game->paper_plane.texture_h/1;
+        game->paper_plane.y = WINDOW_HEIGHT - game->paper_plane.texture_h/2;
         game->paper_plane.dy *= -1;
         game->paper_plane.friction = friction_after_bounce;
         //game->paper_plane.dx *= -1;
