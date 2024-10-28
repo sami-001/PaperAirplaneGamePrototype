@@ -51,6 +51,6 @@ void doRender(Game *game);
 int init(Game *game);
 void initStats(Game *game); 
 void doPhysics(Game *game);
-void quit(Game *game);
+void cleanUp(Game *game);
 
 #endif

@@ -15,15 +15,15 @@ int main(int argc, char *argv[]) {
             doRender(&game);   
         }
 
-        quit(&game);
+        cleanUp(&game);
 
     }
     else {
-        quit(&game);
+        cleanUp(&game);
     }
 }
 
-void quit(Game *game) {
+void cleanUp(Game *game) {
     if (game->window != NULL) {
         SDL_DestroyWindow(game->window);
         game->window = NULL;
@@ -32,11 +32,14 @@ void quit(Game *game) {
         SDL_DestroyRenderer(game->renderer);
         game->renderer = NULL;
     }
-
-    SDL_DestroyTexture(game->paper_plane.texture);
+    if (game->paper_plane.texture != NULL) {
+        SDL_DestroyTexture(game->paper_plane.texture);
+        game->paper_plane.texture = NULL;
+    }
 
     IMG_Quit();
     SDL_Quit();
+    free(game);
     exit(0);
 }
 
