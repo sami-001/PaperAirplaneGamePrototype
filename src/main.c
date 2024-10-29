@@ -1,45 +1,52 @@
 #include "main.h"
 
-int debug_visuals = 0;
+int debug_mode = 1;
 
 int main(int argc, char *argv[]) {
     Game game;
 
-    if (init(&game) == 0) {
+    if (init(&game) == 1) {
 
         initStats(&game);
-        int is_running = 1;
-        while (is_running) {
-            is_running = processEvents(&game);
-            doPhysics(&game);
+        while (processEvents(&game) == 1) {
             doRender(&game);   
-        }
-
-        cleanUp(&game);
-
-    }
-    else {
+            doPhysics(&game);
+            }
         cleanUp(&game);
     }
 }
 
 void cleanUp(Game *game) {
-    if (game->window != NULL) {
-        SDL_DestroyWindow(game->window);
-        game->window = NULL;
-    }
-    if (game->renderer != NULL) {
-        SDL_DestroyRenderer(game->renderer);
-        game->renderer = NULL;
-    }
+    int debug_cleanUp = 0;
+    //Free Textures
     if (game->paper_plane.texture != NULL) {
         SDL_DestroyTexture(game->paper_plane.texture);
         game->paper_plane.texture = NULL;
+        if (debug_cleanUp == 1) {
+            SDL_Log("paper_plane texture freed");
+        }
+    }
+    //Free Renderer
+    if (game->renderer != NULL) {
+        SDL_DestroyRenderer(game->renderer);
+        game->renderer = NULL;
+        if (debug_cleanUp == 1) {
+            SDL_Log("renderer freed");
+        }
+    }
+    //Free Window
+    if (game->window != NULL) {
+        SDL_DestroyWindow(game->window);
+        game->window = NULL;
+        if (debug_cleanUp == 1) {
+            SDL_Log("window freed");
+        }
     }
 
+    //Quit
     IMG_Quit();
     SDL_Quit();
-    free(game);
+
     exit(0);
 }
 
@@ -51,28 +58,28 @@ int init(Game *game) {
     game->renderer = NULL;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        printf("could not initialize SDL. Error : %s", SDL_GetError());
-        init_success = -1;
+        SDL_Log("could not initialize SDL. Error : %s", SDL_GetError());
+        init_success = 0;
         return init_success;
     }
     else { 
         game->window = SDL_CreateWindow("Paper Airplane Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
         if (game->window == NULL) {
-            printf("Could not create game.window. Error: %s", SDL_GetError()); 
-            init_success = -1;
+            SDL_Log("Could not create game.window. Error: %s", SDL_GetError()); 
+            init_success = 0;
             return init_success;
         }
         else {
 
             game->renderer = SDL_CreateRenderer(game->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
             if (game->renderer == NULL) {
-                printf("Could not create renderer. Error: %s", SDL_GetError()); 
-                init_success = -1;
+                SDL_Log("Could not create renderer. Error: %s", SDL_GetError()); 
+                init_success = 0;
                 return init_success;
             }
             else {
                 //Initialized successfully 
-                init_success = 0;
+                init_success = 1;
                 return init_success;
             }
 
@@ -83,7 +90,7 @@ int init(Game *game) {
 
 void initStats(Game *game) {
     ////Init Paper AirPlane////
-    game->paper_plane.is_picked = -1;
+    game->paper_plane.is_picked = 0;
 
     //Init airplane position
     game->paper_plane.x = 66;
@@ -112,7 +119,7 @@ void doRender(Game *game) {
     SDL_RenderCopy(game->renderer, game->paper_plane.texture, NULL, &game->paper_plane.rect);
 
     //AirPlane & Mouse Distance Line
-    if (debug_visuals == 1) {
+    if (debug_mode == 1) {
         SDL_SetRenderDrawColor(game->renderer, 225, 0, 0, 225);
         SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, mouse.x, mouse.y);
     }
@@ -122,6 +129,9 @@ void doRender(Game *game) {
 
 void doPhysics(Game *game) {
  
+    //Get Mouse Position
+    SDL_GetMouseState(&mouse.x, &mouse.y);
+
     //Moves Airplane
     game->paper_plane.x += game->paper_plane.dx;
     game->paper_plane.y += game->paper_plane.dy;
@@ -185,13 +195,14 @@ void doPhysics(Game *game) {
         game->paper_plane.dx = plane_mouse_distance_x / 1;
         game->paper_plane.dy = plane_mouse_distance_y / 1;
 
-        game->paper_plane.is_thrown = -1;
+        game->paper_plane.is_thrown = 0;
     }
 
 }
 
 int processEvents(Game *game) {
     int is_running = 1;
+
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
 
@@ -199,9 +210,13 @@ int processEvents(Game *game) {
             is_running = 0;
         }
 
-        if (e.type == SDL_MOUSEMOTION) {
-            SDL_GetMouseState(&mouse.x, &mouse.y);
+        if (e.type == SDL_WINDOWEVENT_CLOSE) {
+            is_running = 0;
         }
+
+        //if (e.type == SDL_MOUSEMOTION) {
+        //    break;
+        //}
 
         if (e.type == SDL_MOUSEBUTTONDOWN) {
             if (SDL_PointInRect(&mouse, &game->paper_plane.rect)) {
@@ -215,7 +230,7 @@ int processEvents(Game *game) {
                 if (fabsf(plane_mouse_distance_x) >= 15 && fabsf(plane_mouse_distance_y) >= 15) {
                     game->paper_plane.is_thrown = 1;
                 }
-                game->paper_plane.is_picked = -1;
+                game->paper_plane.is_picked = 0;
                 
             }
         }
