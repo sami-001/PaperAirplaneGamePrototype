@@ -99,6 +99,11 @@ void initStats(Game *game) {
     game->paper_plane.dx = 0;
     game->paper_plane.dy = 0;
 
+    //Init airplane direction
+    game->paper_plane.dir_x = 0;
+    game->paper_plane.dir_y = 0;
+    game->paper_plane.dir_angle = 0;
+
     //Init airplane Friction
     game->paper_plane.friction = 0.1;
 
@@ -116,7 +121,8 @@ void doRender(Game *game) {
     //Render AirPlane
     SDL_Rect rect = {game->paper_plane.x - (game->paper_plane.texture_w / 2), game->paper_plane.y - (game->paper_plane.texture_h / 2), game->paper_plane.texture_w, game->paper_plane.texture_h};
     game->paper_plane.rect = rect;
-    SDL_RenderCopy(game->renderer, game->paper_plane.texture, NULL, &game->paper_plane.rect);
+    float angle = game->paper_plane.dir_angle;
+    SDL_RenderCopyEx(game->renderer, game->paper_plane.texture, NULL, &game->paper_plane.rect, angle, NULL, SDL_FLIP_NONE); 
 
     //AirPlane & Mouse Distance Line
     if (debug_mode == 1) {
@@ -135,6 +141,20 @@ void doPhysics(Game *game) {
     //Moves Airplane
     game->paper_plane.x += game->paper_plane.dx;
     game->paper_plane.y += game->paper_plane.dy;
+
+    //Airplane Direction calculation
+      //Direction Vectors
+    if ( fabs(game->paper_plane.dx) > 1) {
+        game->paper_plane.dir_x = (game->paper_plane.x + game->paper_plane.dx) - game->paper_plane.x;
+        game->paper_plane.dir_angle = (atan(game->paper_plane.dir_y / (double) game->paper_plane.dir_x) * (180.0 / PI));
+        SDL_Log("%f", game->paper_plane.dx);
+    }
+    if ( fabs(game->paper_plane.dy) > 1) {
+        game->paper_plane.dir_y = (game->paper_plane.y + game->paper_plane.dy) - game->paper_plane.y;
+        game->paper_plane.dir_angle = (atan(game->paper_plane.dir_y / (double) game->paper_plane.dir_x) * (180.0 / PI));
+        SDL_Log("%f", game->paper_plane.dy);
+    }
+    
 
     //Airplane Collisions with Window edges
     float friction_after_bounce = 0.1;
@@ -187,6 +207,7 @@ void doPhysics(Game *game) {
 
         game->paper_plane.dx = plane_mouse_distance_x / 2;
         game->paper_plane.dy = plane_mouse_distance_y / 2;
+
     }
 
     //Airplane Movement calculations when thrown
@@ -213,10 +234,6 @@ int processEvents(Game *game) {
         if (e.type == SDL_WINDOWEVENT_CLOSE) {
             is_running = 0;
         }
-
-        //if (e.type == SDL_MOUSEMOTION) {
-        //    break;
-        //}
 
         if (e.type == SDL_MOUSEBUTTONDOWN) {
             if (SDL_PointInRect(&mouse, &game->paper_plane.rect)) {
