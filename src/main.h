@@ -30,9 +30,14 @@ typedef struct {
 
     //Texture
     SDL_Texture *texture;
+    SDL_Texture *shadow_texture;
     int texture_w;
     int texture_h;
-    SDL_Rect rect; 
+    int n_frames;
+    SDL_Rect rect;
+    SDL_Rect shadow_rect;
+    SDL_Rect *frames;
+    SDL_Rect current_frame; 
 
     //States
     int is_picked;

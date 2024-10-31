@@ -1,6 +1,6 @@
 #include "main.h"
 
-int debug_mode = 1;
+int debug_mode = 0;
 
 int main(int argc, char *argv[]) {
     Game game;
@@ -108,26 +108,83 @@ void initStats(Game *game) {
     game->paper_plane.friction = 0.1;
 
     //Init airplane texture
+    
     game->paper_plane.texture = IMG_LoadTexture(game->renderer, "../res/textures/paper_airplane.png");
-    game->paper_plane.texture_w = 50;
-    game->paper_plane.texture_h = 50;
+    game->paper_plane.shadow_texture = IMG_LoadTexture(game->renderer, "../res/textures/paper_airplane_shadow.png");
+    SDL_QueryTexture(game->paper_plane.texture, NULL, NULL, &game->paper_plane.texture_w, &game->paper_plane.texture_h);
+
+ 
+      //Init Frames
+    if (game->paper_plane.texture != NULL) { 
+        game->paper_plane.n_frames = 2;
+
+        game->paper_plane.frames = malloc( game->paper_plane.n_frames * sizeof(SDL_Rect));
+        for (int i = 0; i < game->paper_plane.n_frames; i++) {
+            game->paper_plane.frames[i].x = game->paper_plane.texture_w / game->paper_plane.n_frames * i;
+            game->paper_plane.frames[i].y = 0; 
+            game->paper_plane.frames[i].w = game->paper_plane.texture_w / game->paper_plane.n_frames;
+            game->paper_plane.frames[i].h = game->paper_plane.texture_h;
+        } 
+    }
+    else {
+        SDL_Log("could not load texture. ERROR: %s", SDL_GetError());
+        cleanUp(game);
+    }
 }
+
 
 void doRender(Game *game) {
 
-    SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 225);
+    SDL_SetRenderDrawColor(game->renderer, 101, 101, 101, 225);
     SDL_RenderClear(game->renderer);
-
+//                                       FIXME: NEEDS RESTUCTURING
     //Render AirPlane
-    SDL_Rect rect = {game->paper_plane.x - (game->paper_plane.texture_w / 2), game->paper_plane.y - (game->paper_plane.texture_h / 2), game->paper_plane.texture_w, game->paper_plane.texture_h};
-    game->paper_plane.rect = rect;
-    float angle = game->paper_plane.dir_angle;
-    SDL_RenderCopyEx(game->renderer, game->paper_plane.texture, NULL, &game->paper_plane.rect, angle, NULL, SDL_FLIP_NONE); 
+      //Main Destination Rect
+    game->paper_plane.rect.x = game->paper_plane.x - (game->paper_plane.texture_w / game->paper_plane.n_frames / 2);
+    game->paper_plane.rect.y = game->paper_plane.y - (game->paper_plane.texture_h / 2);
+    game->paper_plane.rect.w = game->paper_plane.texture_w / game->paper_plane.n_frames;
+    game->paper_plane.rect.h = game->paper_plane.texture_h;
 
-    //AirPlane & Mouse Distance Line
+    if (fabsf(game->paper_plane.dx) < 4 && fabsf(game->paper_plane.dy) < 4) {
+        game->paper_plane.current_frame = game->paper_plane.frames[0];
+
+        game->paper_plane.shadow_rect.x = game->paper_plane.x - (game->paper_plane.texture_w / game->paper_plane.n_frames / 2) + 10;
+        game->paper_plane.shadow_rect.y = game->paper_plane.y - (game->paper_plane.texture_h / 2) + 10;
+        game->paper_plane.shadow_rect.w = game->paper_plane.texture_w / game->paper_plane.n_frames;
+        game->paper_plane.shadow_rect.h = game->paper_plane.texture_h;
+    }
+    else {
+        game->paper_plane.current_frame = game->paper_plane.frames[1];
+
+        game->paper_plane.shadow_rect.x = game->paper_plane.x - (game->paper_plane.texture_w / game->paper_plane.n_frames / 2) + 30;
+        game->paper_plane.shadow_rect.y = game->paper_plane.y - (game->paper_plane.texture_h / 2) + 30;
+        game->paper_plane.shadow_rect.w = game->paper_plane.texture_w / game->paper_plane.n_frames;
+        game->paper_plane.shadow_rect.h = game->paper_plane.texture_h;
+    }
+    //Plane Shadow Texture
+    SDL_RenderCopyEx(game->renderer, game->paper_plane.shadow_texture, NULL, &game->paper_plane.shadow_rect, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE); 
+    //Plane Texture
+    SDL_RenderCopyEx(game->renderer, game->paper_plane.texture, &game->paper_plane.current_frame, &game->paper_plane.rect, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE); 
+    SDL_ScaleMode(NEAR);
+
+    //Visual Debug
     if (debug_mode == 1) {
+        //Red line from plane to mouse
         SDL_SetRenderDrawColor(game->renderer, 225, 0, 0, 225);
         SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, mouse.x, mouse.y);
+
+        int length_mult = 3;
+        //Yellow line from plane to (dx, dy)
+        SDL_SetRenderDrawColor(game->renderer, 0, 225, 225, 225);
+        SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, (game->paper_plane.x+game->paper_plane.dx * length_mult), (game->paper_plane.y+game->paper_plane.dy * length_mult));
+
+        //Green line from plane to mouse x
+        SDL_SetRenderDrawColor(game->renderer, 0, 225, 0, 225);
+        SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, (game->paper_plane.x+game->paper_plane.dx * length_mult), game->paper_plane.y);
+
+        //Blue line from plane to mouse y
+        SDL_SetRenderDrawColor(game->renderer, 0, 0, 225, 225);
+        SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, game->paper_plane.x, (game->paper_plane.y+game->paper_plane.dy * length_mult));
     }
 
     SDL_RenderPresent(game->renderer);
@@ -146,14 +203,14 @@ void doPhysics(Game *game) {
       //Direction Vectors
     if ( fabs(game->paper_plane.dx) > 1) {
         game->paper_plane.dir_x = (game->paper_plane.x + game->paper_plane.dx) - game->paper_plane.x;
-        game->paper_plane.dir_angle = (atan(game->paper_plane.dir_y / (double) game->paper_plane.dir_x) * (180.0 / PI));
-        SDL_Log("%f", game->paper_plane.dx);
+        //SDL_Log("%f", game->paper_plane.dx);
     }
     if ( fabs(game->paper_plane.dy) > 1) {
         game->paper_plane.dir_y = (game->paper_plane.y + game->paper_plane.dy) - game->paper_plane.y;
-        game->paper_plane.dir_angle = (atan(game->paper_plane.dir_y / (double) game->paper_plane.dir_x) * (180.0 / PI));
-        SDL_Log("%f", game->paper_plane.dy);
+        //SDL_Log("%f", game->paper_plane.dy);
     }
+    game->paper_plane.dir_angle = (atan2(game->paper_plane.dir_y, game->paper_plane.dir_x) * (180.0 / PI));
+    //SDL_Log("%f", game->paper_plane.dir_angle);
     
 
     //Airplane Collisions with Window edges
