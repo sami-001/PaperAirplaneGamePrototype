@@ -10,14 +10,30 @@
 
 #define PI 3.14159265358979323846
 
-const int WINDOW_HEIGHT = 960;
-const int WINDOW_WIDTH = 1440;
+#define FPS 60
+#define FrameTime 4000 / FPS
 
+const int WINDOW_WIDTH = 960;
+const int WINDOW_HEIGHT = 720;
+
+const int LOGICAL_W_WIDTH = 320;
+const int LOGICAL_W_HEIGHT = 240;
+
+float scaleX = (float)WINDOW_WIDTH / (float)LOGICAL_W_WIDTH;
+float scaleY = (float)WINDOW_HEIGHT / (float)LOGICAL_W_HEIGHT;
 
 SDL_Point mouse;
 
 float plane_mouse_distance_x; 
 float  plane_mouse_distance_y;
+
+typedef struct {
+    SDL_Texture *spritesheet;
+    SDL_Rect rect; 
+    int currentSrcRect;
+    int lastFrameTick;
+    int loaded;
+} Sprite;
 
 typedef struct {
     int x;
@@ -29,15 +45,8 @@ typedef struct {
     float friction;
 
     //Texture
-    SDL_Texture *texture;
-    SDL_Texture *shadow_texture;
-    int texture_w;
-    int texture_h;
-    int n_frames;
+    Sprite sprite;
     SDL_Rect rect;
-    SDL_Rect shadow_rect;
-    SDL_Rect *frames;
-    SDL_Rect current_frame; 
 
     //States
     int is_picked;
@@ -56,15 +65,13 @@ typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
 
+    Uint32 startTick;
+
     PaperAirPlane paper_plane;
+    
+    Sprite dot;
+    SDL_Rect dotRect;
 
 } Game;
-
-int processEvents(Game *game);
-void doRender(Game *game);
-int init(Game *game);
-void initStats(Game *game); 
-void doPhysics(Game *game);
-void cleanUp(Game *game);
 
 #endif

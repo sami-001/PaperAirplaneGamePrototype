@@ -1,48 +1,29 @@
 #include "main.h"
 
-int debug_mode = 0;
+int debug_mode = 1;
 
-int main(int argc, char *argv[]) {
-    Game game;
-
-    if (init(&game) == 1) {
-
-        initStats(&game);
-        while (processEvents(&game) == 1) {
-            doRender(&game);   
-            doPhysics(&game);
-            }
-        cleanUp(&game);
+void freeSprite(Sprite sprite) {
+    if (sprite.spritesheet != NULL) {
+        SDL_DestroyTexture(sprite.spritesheet);
+        sprite.spritesheet = NULL;
     }
 }
 
 void cleanUp(Game *game) {
-    int debug_cleanUp = 0;
-    //Free Textures
-    if (game->paper_plane.texture != NULL) {
-        SDL_DestroyTexture(game->paper_plane.texture);
-        game->paper_plane.texture = NULL;
-        if (debug_cleanUp == 1) {
-            SDL_Log("paper_plane texture freed");
-        }
-    }
+    //Free Sprites
+    freeSprite(game->paper_plane.sprite);
+    freeSprite(game->dot);
+
     //Free Renderer
     if (game->renderer != NULL) {
         SDL_DestroyRenderer(game->renderer);
         game->renderer = NULL;
-        if (debug_cleanUp == 1) {
-            SDL_Log("renderer freed");
-        }
     }
     //Free Window
     if (game->window != NULL) {
         SDL_DestroyWindow(game->window);
         game->window = NULL;
-        if (debug_cleanUp == 1) {
-            SDL_Log("window freed");
-        }
     }
-
     //Quit
     IMG_Quit();
     SDL_Quit();
@@ -58,14 +39,14 @@ int init(Game *game) {
     game->renderer = NULL;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        SDL_Log("could not initialize SDL. Error : %s", SDL_GetError());
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ERROR", SDL_GetError(), game->window);
         init_success = 0;
         return init_success;
     }
     else { 
         game->window = SDL_CreateWindow("Paper Airplane Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
         if (game->window == NULL) {
-            SDL_Log("Could not create game.window. Error: %s", SDL_GetError()); 
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ERROR", SDL_GetError(), game->window);
             init_success = 0;
             return init_success;
         }
@@ -73,11 +54,12 @@ int init(Game *game) {
 
             game->renderer = SDL_CreateRenderer(game->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
             if (game->renderer == NULL) {
-                SDL_Log("Could not create renderer. Error: %s", SDL_GetError()); 
+                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ERROR", SDL_GetError(), game->window);
                 init_success = 0;
                 return init_success;
             }
             else {
+                SDL_RenderSetLogicalSize(game->renderer, LOGICAL_W_WIDTH, LOGICAL_W_HEIGHT);
                 //Initialized successfully 
                 init_success = 1;
                 return init_success;
@@ -88,13 +70,31 @@ int init(Game *game) {
 
 }
 
+void initSprite(Game *game, Sprite *sprite, char *texture_path, SDL_Rect rect) {
+
+    sprite->loaded = 0;
+    sprite->currentSrcRect = 0;
+    sprite->lastFrameTick = 0;
+    char buffer[100];
+    SDL_snprintf(buffer, sizeof(buffer), "%s", texture_path);
+    sprite->spritesheet = IMG_LoadTexture(game->renderer, buffer);
+    if (sprite->spritesheet != NULL) {
+        sprite->loaded = 1;
+    }
+    else {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ERROR", SDL_GetError(), game->window);
+        cleanUp(game);
+    }
+    sprite->rect = rect;
+}
+
 void initStats(Game *game) {
     ////Init Paper AirPlane////
     game->paper_plane.is_picked = 0;
 
     //Init airplane position
-    game->paper_plane.x = 66;
-    game->paper_plane.y = 141;
+    game->paper_plane.x = 23;
+    game->paper_plane.y = 23;
 
     game->paper_plane.dx = 0;
     game->paper_plane.dy = 0;
@@ -108,64 +108,49 @@ void initStats(Game *game) {
     game->paper_plane.friction = 0.1;
 
     //Init airplane texture
-    
-    game->paper_plane.texture = IMG_LoadTexture(game->renderer, "../res/textures/paper_airplane.png");
-    game->paper_plane.shadow_texture = IMG_LoadTexture(game->renderer, "../res/textures/paper_airplane_shadow.png");
-    SDL_QueryTexture(game->paper_plane.texture, NULL, NULL, &game->paper_plane.texture_w, &game->paper_plane.texture_h);
+    initSprite(game, &game->paper_plane.sprite, "../res/textures/paper_airplane.png", (SDL_Rect){0, 0, 16, 16});
+    initSprite(game, &game->dot, "../res/textures/Sprite-0001.png", (SDL_Rect){0, 0, 16, 16});
+    game->dotRect = (SDL_Rect){123, 123, 16, 16};
+}
 
- 
-      //Init Frames
-    if (game->paper_plane.texture != NULL) { 
-        game->paper_plane.n_frames = 2;
+SDL_Rect *initSrcRect(Game *game, Sprite *sprite, int xFrames, int rowFrame) {
 
-        game->paper_plane.frames = malloc( game->paper_plane.n_frames * sizeof(SDL_Rect));
-        for (int i = 0; i < game->paper_plane.n_frames; i++) {
-            game->paper_plane.frames[i].x = game->paper_plane.texture_w / game->paper_plane.n_frames * i;
-            game->paper_plane.frames[i].y = 0; 
-            game->paper_plane.frames[i].w = game->paper_plane.texture_w / game->paper_plane.n_frames;
-            game->paper_plane.frames[i].h = game->paper_plane.texture_h;
+    SDL_Rect *frames = malloc(xFrames * sizeof(SDL_Rect));
+    if (sprite->loaded != 0) { 
+
+        for (int i = 0; i < xFrames; i++) {
+            frames[i].x = sprite->rect.w * (i);
+            frames[i].y = sprite->rect.h * (rowFrame - 1);
+            frames[i].w = sprite->rect.w;
+            frames[i].h = sprite->rect.h;
         } 
     }
     else {
-        SDL_Log("could not load texture. ERROR: %s", SDL_GetError());
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ERROR", SDL_GetError(), game->window);
         cleanUp(game);
     }
+    return frames;
 }
 
+void renderSprite(Game *game, Sprite *sprite, int xFrames, int rowFrames, double angle, SDL_Point *centre, SDL_RendererFlip flip_flag) {
+    SDL_Rect *srcRect = initSrcRect(game, sprite, xFrames, rowFrames);
+    Uint32 startTick = SDL_GetTicks();
+        if (startTick - sprite->lastFrameTick >= FrameTime) {
+            sprite->currentSrcRect = (sprite->currentSrcRect + 1) % xFrames;
+
+            sprite->lastFrameTick = startTick;
+        }
+        SDL_RenderCopyEx(game->renderer, sprite->spritesheet, &srcRect[sprite->currentSrcRect], &sprite->rect, angle, centre, flip_flag); 
+}
 
 void doRender(Game *game) {
 
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_SetRenderDrawColor(game->renderer, 101, 101, 101, 225);
     SDL_RenderClear(game->renderer);
-//                                       FIXME: NEEDS RESTUCTURING
-    //Render AirPlane
-      //Main Destination Rect
-    game->paper_plane.rect.x = game->paper_plane.x - (game->paper_plane.texture_w / game->paper_plane.n_frames / 2);
-    game->paper_plane.rect.y = game->paper_plane.y - (game->paper_plane.texture_h / 2);
-    game->paper_plane.rect.w = game->paper_plane.texture_w / game->paper_plane.n_frames;
-    game->paper_plane.rect.h = game->paper_plane.texture_h;
 
-    if (fabsf(game->paper_plane.dx) < 4 && fabsf(game->paper_plane.dy) < 4) {
-        game->paper_plane.current_frame = game->paper_plane.frames[0];
-
-        game->paper_plane.shadow_rect.x = game->paper_plane.x - (game->paper_plane.texture_w / game->paper_plane.n_frames / 2) + 10;
-        game->paper_plane.shadow_rect.y = game->paper_plane.y - (game->paper_plane.texture_h / 2) + 10;
-        game->paper_plane.shadow_rect.w = game->paper_plane.texture_w / game->paper_plane.n_frames;
-        game->paper_plane.shadow_rect.h = game->paper_plane.texture_h;
-    }
-    else {
-        game->paper_plane.current_frame = game->paper_plane.frames[1];
-
-        game->paper_plane.shadow_rect.x = game->paper_plane.x - (game->paper_plane.texture_w / game->paper_plane.n_frames / 2) + 30;
-        game->paper_plane.shadow_rect.y = game->paper_plane.y - (game->paper_plane.texture_h / 2) + 30;
-        game->paper_plane.shadow_rect.w = game->paper_plane.texture_w / game->paper_plane.n_frames;
-        game->paper_plane.shadow_rect.h = game->paper_plane.texture_h;
-    }
-    //Plane Shadow Texture
-    SDL_RenderCopyEx(game->renderer, game->paper_plane.shadow_texture, NULL, &game->paper_plane.shadow_rect, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE); 
-    //Plane Texture
-    SDL_RenderCopyEx(game->renderer, game->paper_plane.texture, &game->paper_plane.current_frame, &game->paper_plane.rect, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE); 
-    SDL_ScaleMode(NEAR);
+    renderSprite(game, &game->paper_plane.sprite, 2, 1, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE);
+    renderSprite(game, &game->dot, 4, 1, 0, NULL, 0);
 
     //Visual Debug
     if (debug_mode == 1) {
@@ -186,7 +171,6 @@ void doRender(Game *game) {
         SDL_SetRenderDrawColor(game->renderer, 0, 0, 225, 225);
         SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, game->paper_plane.x, (game->paper_plane.y+game->paper_plane.dy * length_mult));
     }
-
     SDL_RenderPresent(game->renderer);
 }
 
@@ -194,47 +178,50 @@ void doPhysics(Game *game) {
  
     //Get Mouse Position
     SDL_GetMouseState(&mouse.x, &mouse.y);
+    mouse.x = (mouse.x / (int)scaleX);
+    mouse.y = (mouse.y / (int)scaleY);
 
     //Moves Airplane
     game->paper_plane.x += game->paper_plane.dx;
     game->paper_plane.y += game->paper_plane.dy;
 
+    //Move Airplane Rect
+    game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
+    game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+
     //Airplane Direction calculation
       //Direction Vectors
-    if ( fabs(game->paper_plane.dx) > 1) {
+    if ( fabs(game->paper_plane.dx) > 0.3) {
         game->paper_plane.dir_x = (game->paper_plane.x + game->paper_plane.dx) - game->paper_plane.x;
-        //SDL_Log("%f", game->paper_plane.dx);
     }
-    if ( fabs(game->paper_plane.dy) > 1) {
+    if ( fabs(game->paper_plane.dy) > 0.3) {
         game->paper_plane.dir_y = (game->paper_plane.y + game->paper_plane.dy) - game->paper_plane.y;
-        //SDL_Log("%f", game->paper_plane.dy);
     }
     game->paper_plane.dir_angle = (atan2(game->paper_plane.dir_y, game->paper_plane.dir_x) * (180.0 / PI));
-    //SDL_Log("%f", game->paper_plane.dir_angle);
     
 
     //Airplane Collisions with Window edges
-    float friction_after_bounce = 0.1;
-    if (game->paper_plane.x-game->paper_plane.texture_w/2 < 0) { //Left edge
-        game->paper_plane.x = 0 + game->paper_plane.texture_w/2;
+    float friction_after_bounce = 0.8;
+    if (game->paper_plane.x-game->paper_plane.sprite.rect.w/2 < 0) { //Left edge
+        game->paper_plane.x = 0 + game->paper_plane.sprite.rect.w/2;
         game->paper_plane.dx *= -1;
         game->paper_plane.friction = friction_after_bounce;
         //game->paper_plane.dy *= -1;
     }
-    else if (game->paper_plane.x+game->paper_plane.texture_w/2 > WINDOW_WIDTH) { //Right edge
-        game->paper_plane.x = WINDOW_WIDTH - game->paper_plane.texture_w/2;
+    else if (game->paper_plane.x+game->paper_plane.sprite.rect.w/2 > LOGICAL_W_WIDTH) { //Right edge
+        game->paper_plane.x = LOGICAL_W_WIDTH - game->paper_plane.sprite.rect.w/2;
         game->paper_plane.dx *= -1;
         game->paper_plane.friction = friction_after_bounce;
         //game->paper_plane.dy *= -1;
     }
-    if (game->paper_plane.y-game->paper_plane.texture_h/2 < 0) { //Top edge
-        game->paper_plane.y = 0 + game->paper_plane.texture_h/2;
+    if (game->paper_plane.y-game->paper_plane.sprite.rect.h/2 < 0) { //Top edge
+        game->paper_plane.y = 0 + game->paper_plane.sprite.rect.h/2;
         game->paper_plane.dy *= -1;
         game->paper_plane.friction = friction_after_bounce;
         //game->paper_plane.dx *= -1;
     }
-    else if (game->paper_plane.y+game->paper_plane.texture_h/2 > WINDOW_HEIGHT) { //Bottom edge
-        game->paper_plane.y = WINDOW_HEIGHT - game->paper_plane.texture_h/2;
+    else if (game->paper_plane.y+game->paper_plane.sprite.rect.h/2 > LOGICAL_W_HEIGHT) { //Bottom edge
+        game->paper_plane.y = LOGICAL_W_HEIGHT - game->paper_plane.sprite.rect.h/2;
         game->paper_plane.dy *= -1;
         game->paper_plane.friction = friction_after_bounce;
         //game->paper_plane.dx *= -1;
@@ -293,7 +280,7 @@ int processEvents(Game *game) {
         }
 
         if (e.type == SDL_MOUSEBUTTONDOWN) {
-            if (SDL_PointInRect(&mouse, &game->paper_plane.rect)) {
+            if (SDL_PointInRect(&mouse, &game->paper_plane.sprite.rect)) {
                 game->paper_plane.is_picked = 1;  
                 game->paper_plane.friction = 0.1;
             }
@@ -310,4 +297,18 @@ int processEvents(Game *game) {
         }
     }
     return is_running;
+}
+
+int main(int argc, char *argv[]) {
+    Game game;
+
+    if (init(&game) == 1) {
+
+        initStats(&game);
+        while (processEvents(&game) == 1) {
+            doPhysics(&game);
+            doRender(&game);   
+        }
+        cleanUp(&game);
+    }
 }
