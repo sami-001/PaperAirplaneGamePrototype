@@ -43,6 +43,11 @@ typedef struct {
     float dy;
     
     float friction;
+    float picked_drag; //Divides distance to mouse which will equal delta position
+    float thrown_drag;
+    float throw_threshold; //Minimum distance from mouse while picked to throw when released  
+    float min_delta_pos; //If delta position is less that this, set it to 0. If not apply friction
+    float friction_after_bounce;
 
     //Texture
     Sprite sprite;
@@ -70,7 +75,6 @@ typedef struct {
     PaperAirPlane paper_plane;
     
     Sprite dot;
-    SDL_Rect dotRect;
 
 } Game;
 
