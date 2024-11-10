@@ -113,8 +113,8 @@ void initStats(Game *game) {
     game->paper_plane.min_delta_pos = 2.0; //If delta position is less that this, set it to 0. If not apply friction
 
     //Init airplane texture
-    initSprite(game, &game->paper_plane.sprite, "../res/textures/paper_airplane.png", (SDL_Rect){0, 0, 16, 16});
-    initSprite(game, &game->dot, "../res/textures/Sprite-0001.png", (SDL_Rect){0, 0, 16, 16});
+    initSprite(game, &game->paper_plane.sprite, "res/textures/paper_airplane.png", (SDL_Rect){0, 0, 16, 16});
+    initSprite(game, &game->dot, "res/textures/Sprite-0001.png", (SDL_Rect){0, 0, 16, 16});
     game->dot.rect = (SDL_Rect){100, 123, 16, 16};
 }
 
@@ -128,7 +128,6 @@ SDL_Rect *initSrcRect(Game *game, Sprite *sprite, int xFrames, int rowFrame) {
             frames[i].y = sprite->rect.h * (rowFrame - 1);
             frames[i].w = sprite->rect.w;
             frames[i].h = sprite->rect.h;
-            SDL_Log("%d", i);
         } 
     }
     else {
