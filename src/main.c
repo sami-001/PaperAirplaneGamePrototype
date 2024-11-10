@@ -128,6 +128,7 @@ SDL_Rect *initSrcRect(Game *game, Sprite *sprite, int xFrames, int rowFrame) {
             frames[i].y = sprite->rect.h * (rowFrame - 1);
             frames[i].w = sprite->rect.w;
             frames[i].h = sprite->rect.h;
+            SDL_Log("%d", i);
         } 
     }
     else {
@@ -137,11 +138,14 @@ SDL_Rect *initSrcRect(Game *game, Sprite *sprite, int xFrames, int rowFrame) {
     return frames;
 }
 
-void renderSprite(Game *game, Sprite *sprite, int xFrames, int rowFrames, double angle, SDL_Point *centre, SDL_RendererFlip flip_flag) {
+void renderSprite(Game *game, Sprite *sprite, int startFrame, int xFrames, int rowFrames, double angle, SDL_Point *centre, SDL_RendererFlip flip_flag) {
     SDL_Rect *srcRect = initSrcRect(game, sprite, xFrames, rowFrames);
     Uint32 startTick = SDL_GetTicks();
         if (startTick - sprite->lastFrameTick >= FrameTime) {
             sprite->currentSrcRect = (sprite->currentSrcRect + 1) % xFrames;
+            if (sprite->currentSrcRect == 0) {
+                sprite->currentSrcRect = startFrame - 1;
+            }
 
             sprite->lastFrameTick = startTick;
         }
@@ -154,14 +158,14 @@ void doRender(Game *game) {
     SDL_SetRenderDrawColor(game->renderer, 1, 1, 1, 225);
     SDL_RenderClear(game->renderer);
 
-    renderSprite(game, &game->paper_plane.sprite, 2, 1, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE);
+    renderSprite(game, &game->paper_plane.sprite, 1, 2, 1, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE);
 
     //Render Dot
     if (game->paper_plane.is_picked) {
-        renderSprite(game, &game->dot, 4, 1, 0, NULL, 0);
+        renderSprite(game, &game->dot, 1, 4, 1, 0, NULL, 0);
     }
     else {
-        renderSprite(game, &game->dot, 1, 1, 0, NULL, 0);
+        renderSprite(game, &game->dot, 3, 3, 1, 0, NULL, 0);
     }
 
     //Visual Debug
