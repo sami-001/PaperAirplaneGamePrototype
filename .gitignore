@@ -1,2 +1,3 @@
 res/unexported/
-main
+build/*.o
+game

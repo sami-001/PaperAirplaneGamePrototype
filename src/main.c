@@ -2,13 +2,6 @@
 
 int debug_mode = 0;
 
-void freeSprite(Sprite *sprite) {
-    if (sprite->spritesheet != NULL) {
-        SDL_DestroyTexture(sprite->spritesheet);
-        sprite->spritesheet = NULL;
-    }
-}
-
 void cleanUp(Game *game) {
     //Free Sprites
     freeSprite(&game->paper_plane.sprite);
@@ -70,23 +63,6 @@ int init(Game *game) {
 
 }
 
-void initSprite(Game *game, Sprite *sprite, char *texture_path, SDL_Rect rect) {
-
-    sprite->loaded = 0;
-    sprite->currentSrcRect = 0;
-    sprite->lastFrameTick = 0;
-    char buffer[100];
-    SDL_snprintf(buffer, sizeof(buffer), "%s", texture_path);
-    sprite->spritesheet = IMG_LoadTexture(game->renderer, buffer);
-    if (sprite->spritesheet != NULL) {
-        sprite->loaded = 1;
-    }
-    else {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ERROR", SDL_GetError(), game->window);
-        cleanUp(game);
-    }
-    sprite->rect = rect;
-}
 
 void initStats(Game *game) {
     ////Init Paper AirPlane////
@@ -113,58 +89,26 @@ void initStats(Game *game) {
     game->paper_plane.min_delta_pos = 2.0; //If delta position is less that this, set it to 0. If not apply friction
 
     //Init airplane texture
-    initSprite(game, &game->paper_plane.sprite, "res/textures/paper_airplane.png", (SDL_Rect){0, 0, 16, 16});
-    initSprite(game, &game->dot, "res/textures/Sprite-0001.png", (SDL_Rect){0, 0, 16, 16});
+    initSprite(game->renderer, &game->paper_plane.sprite, "res/textures/paper_airplane.png", (SDL_Rect){0, 0, 16, 16});
+    initSprite(game->renderer, &game->dot, "res/textures/Sprite-0001.png", (SDL_Rect){0, 0, 16, 16});
     game->dot.rect = (SDL_Rect){100, 123, 16, 16};
 }
 
-SDL_Rect *initSrcRect(Game *game, Sprite *sprite, int xFrames, int rowFrame) {
 
-    SDL_Rect *frames = malloc(xFrames * sizeof(SDL_Rect));
-    if (sprite->loaded != 0) { 
-
-        for (int i = 0; i < xFrames; i++) {
-            frames[i].x = sprite->rect.w * (i);
-            frames[i].y = sprite->rect.h * (rowFrame - 1);
-            frames[i].w = sprite->rect.w;
-            frames[i].h = sprite->rect.h;
-        } 
-    }
-    else {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ERROR", SDL_GetError(), game->window);
-        cleanUp(game);
-    }
-    return frames;
-}
-
-void renderSprite(Game *game, Sprite *sprite, int startFrame, int xFrames, int rowFrames, double angle, SDL_Point *centre, SDL_RendererFlip flip_flag) {
-    SDL_Rect *srcRect = initSrcRect(game, sprite, xFrames, rowFrames);
-    Uint32 startTick = SDL_GetTicks();
-        if (startTick - sprite->lastFrameTick >= FrameTime) {
-            sprite->currentSrcRect = (sprite->currentSrcRect + 1) % xFrames;
-            if (sprite->currentSrcRect == 0) {
-                sprite->currentSrcRect = startFrame - 1;
-            }
-
-            sprite->lastFrameTick = startTick;
-        }
-        SDL_RenderCopyEx(game->renderer, sprite->spritesheet, &srcRect[sprite->currentSrcRect], &sprite->rect, angle, centre, flip_flag); 
-}
 
 void doRender(Game *game) {
 
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_SetRenderDrawColor(game->renderer, 1, 1, 1, 225);
     SDL_RenderClear(game->renderer);
 
-    renderSprite(game, &game->paper_plane.sprite, 1, 2, 1, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE);
+    renderSprite(game->renderer, &game->paper_plane.sprite, 1, 2, 1, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE);
 
     //Render Dot
     if (game->paper_plane.is_picked) {
-        renderSprite(game, &game->dot, 1, 4, 1, 0, NULL, 0);
+        renderSprite(game->renderer, &game->dot, 1, 4, 1, 0, NULL, 0);
     }
     else {
-        renderSprite(game, &game->dot, 3, 3, 1, 0, NULL, 0);
+        renderSprite(game->renderer, &game->dot, 3, 3, 1, 0, NULL, 0);
     }
 
     //Visual Debug
@@ -196,13 +140,27 @@ void doPhysics(Game *game) {
     mouse.x = (mouse.x / (int)scaleX);
     mouse.y = (mouse.y / (int)scaleY);
 
-    //Moves Airplane
-    game->paper_plane.x += game->paper_plane.dx;
-    game->paper_plane.y += game->paper_plane.dy;
+    if (SDL_PointInRect(&(SDL_Point){game->paper_plane.x, game->paper_plane.y}, &windowRect) == 1) {
+        game->paper_plane.savedX = game->paper_plane.x;
+        game->paper_plane.savedY = game->paper_plane.y;
+    }
+    else {
+        game->paper_plane.x = game->paper_plane.savedX;
+        game->paper_plane.dx = 0;
+        game->paper_plane.y = game->paper_plane.savedY;
+        game->paper_plane.dy = 0;
+    }
 
+    //Moves Airplane
+    game->paper_plane.x += game->paper_plane.dx;// * game->paper_plane.velocity.x;
+    game->paper_plane.y += game->paper_plane.dy;// * game->paper_plane.velocity.y;
     //Move Airplane Rect
     game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
     game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+
+    //Distance between Plane and Mouse
+    plane_mouse_distance_x = (mouse.x - game->paper_plane.x);
+    plane_mouse_distance_y = (mouse.y - game->paper_plane.y);
 
     //Airplane Direction calculation
       //Direction Vectors
@@ -212,32 +170,9 @@ void doPhysics(Game *game) {
     if ( fabs(game->paper_plane.dy) > 0.3) {
         game->paper_plane.dir_y = (game->paper_plane.y + game->paper_plane.dy) - game->paper_plane.y;
     }
+      //Direction Angle
     game->paper_plane.dir_angle = (atan2(game->paper_plane.dir_y, game->paper_plane.dir_x) * (180.0 / PI));
-    
-
-    //Airplane Collisions with Window edges
-    if (game->paper_plane.x-game->paper_plane.sprite.rect.w/2 < 0) { //Left edge
-        game->paper_plane.x = 0 + game->paper_plane.sprite.rect.w/2;
-        game->paper_plane.dx *= -1;
-        game->paper_plane.friction = game->paper_plane.friction_after_bounce;
-    }
-    else if (game->paper_plane.x+game->paper_plane.sprite.rect.w/2 > LOGICAL_W_WIDTH) { //Right edge
-        game->paper_plane.x = LOGICAL_W_WIDTH - game->paper_plane.sprite.rect.w/2;
-        game->paper_plane.dx *= -1;
-        game->paper_plane.friction = game->paper_plane.friction_after_bounce;
-    }
-    if (game->paper_plane.y-game->paper_plane.sprite.rect.h/2 < 0) { //Top edge
-        game->paper_plane.y = 0 + game->paper_plane.sprite.rect.h/2;
-        game->paper_plane.dy *= -1;
-        game->paper_plane.friction = game->paper_plane.friction_after_bounce;
-    }
-    else if (game->paper_plane.y+game->paper_plane.sprite.rect.h/2 > LOGICAL_W_HEIGHT) { //Bottom edge
-        game->paper_plane.y = LOGICAL_W_HEIGHT - game->paper_plane.sprite.rect.h/2;
-        game->paper_plane.dy *= -1;
-        game->paper_plane.friction = game->paper_plane.friction_after_bounce;
-    
-    }
-
+   
     //Friction
     if (fabs(game->paper_plane.dx) >= game->paper_plane.min_delta_pos) {
         game->paper_plane.dx *= (1.0 - game->paper_plane.friction);
@@ -258,10 +193,6 @@ void doPhysics(Game *game) {
             game->paper_plane.dx = 0;
         }
     }
-
-    //Distance between Plane and Mouse
-    plane_mouse_distance_x = (mouse.x - game->paper_plane.x);
-    plane_mouse_distance_y = (mouse.y - game->paper_plane.y);
 
     //AirPlane Movement Calculations when picked
     if (game->paper_plane.is_picked == 1) {

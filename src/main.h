@@ -8,16 +8,17 @@
 #include <SDL2/SDL.h> 
 #include <SDL2/SDL_image.h>
 
-#define PI 3.14159265358979323846
+#include "sprite.h"
 
-#define FPS 60
-#define FrameTime 4000 / FPS
+#define PI 3.14159265358979323846
 
 const int WINDOW_WIDTH = 960;
 const int WINDOW_HEIGHT = 720;
 
 const int LOGICAL_W_WIDTH = 320;
 const int LOGICAL_W_HEIGHT = 240;
+
+SDL_Rect windowRect = {0, 0, LOGICAL_W_WIDTH, LOGICAL_W_HEIGHT};
 
 float scaleX = (float)WINDOW_WIDTH / (float)LOGICAL_W_WIDTH;
 float scaleY = (float)WINDOW_HEIGHT / (float)LOGICAL_W_HEIGHT;
@@ -28,20 +29,17 @@ float plane_mouse_distance_x;
 float  plane_mouse_distance_y;
 
 typedef struct {
-    SDL_Texture *spritesheet;
-    SDL_Rect rect; 
-    int currentSrcRect;
-    int lastFrameTick;
-    int loaded;
-} Sprite;
-
-typedef struct {
     int x;
     int y;
+
+    //Saves position of last frame
+    int savedX;
+    int savedY;
 
     float dx;
     float dy;
     
+    SDL_Point velocity;
     float friction;
     float picked_drag; //Divides distance to mouse which will equal delta position
     float thrown_drag;
@@ -51,7 +49,6 @@ typedef struct {
 
     //Texture
     Sprite sprite;
-    SDL_Rect rect;
 
     //States
     int is_picked;
