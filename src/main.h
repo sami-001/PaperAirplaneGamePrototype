@@ -18,7 +18,7 @@ const int WINDOW_HEIGHT = 720;
 const int LOGICAL_W_WIDTH = 320;
 const int LOGICAL_W_HEIGHT = 240;
 
-SDL_Rect windowRect = {0, 0, LOGICAL_W_WIDTH, LOGICAL_W_HEIGHT};
+SDL_Rect windowRect = {0+10, 0+10, LOGICAL_W_WIDTH-20, LOGICAL_W_HEIGHT-20};
 
 float scaleX = (float)WINDOW_WIDTH / (float)LOGICAL_W_WIDTH;
 float scaleY = (float)WINDOW_HEIGHT / (float)LOGICAL_W_HEIGHT;
@@ -39,11 +39,8 @@ typedef struct {
     float dx;
     float dy;
     
-    SDL_Point velocity;
     float friction;
-    float picked_drag; //Divides distance to mouse which will equal delta position
     float thrown_drag;
-    float throw_threshold; //Minimum distance from mouse while picked to throw when released  
     float min_delta_pos; //If delta position is less that this, set it to 0. If not apply friction
     float friction_after_bounce;
 
