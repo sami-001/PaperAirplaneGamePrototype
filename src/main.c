@@ -83,8 +83,7 @@ void initStats(Game *game) {
     //Init airplane Friction
     game->paper_plane.friction = 0.1;
     game->paper_plane.friction_after_bounce = 0.2;
-    game->paper_plane.picked_drag = 2.0; //Divides distance to mouse which will equal delta position
-    game->paper_plane.thrown_drag = 1.0;
+    game->paper_plane.thrown_drag = 3.5;
     game->paper_plane.throw_threshold = 15.0; //Minimum distance from mouse while picked to throw when released  
     game->paper_plane.min_delta_pos = 2.0; //If delta position is less that this, set it to 0. If not apply friction
 
@@ -111,11 +110,15 @@ void doRender(Game *game) {
         renderSprite(game->renderer, &game->dot, 3, 3, 1, 0, NULL, 0);
     }
 
-    //Visual Debug
-    if (debug_mode == 1) {
+    if (game->paper_plane.is_picked == 1) {
         //Red line from plane to mouse
         SDL_SetRenderDrawColor(game->renderer, 225, 0, 0, 225);
-        SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, mouse.x, mouse.y);
+        //SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, mouse.x, mouse.y);
+        SDL_RenderDrawLine(game->renderer, game->paper_plane.x, game->paper_plane.y, game->paper_plane.x - plane_mouse_distance_x , game->paper_plane.y - plane_mouse_distance_y);
+    }
+
+    //Visual Debug
+    if (debug_mode == 1) {
 
         int length_mult = 3;
         //Yellow line from plane to (dx, dy)
@@ -140,6 +143,10 @@ void doPhysics(Game *game) {
     mouse.x = (mouse.x / (int)scaleX);
     mouse.y = (mouse.y / (int)scaleY);
 
+    //Distance between Plane and Mouse
+    plane_mouse_distance_x = (mouse.x - game->paper_plane.x);
+    plane_mouse_distance_y = (mouse.y - game->paper_plane.y);
+
     if (SDL_PointInRect(&(SDL_Point){game->paper_plane.x, game->paper_plane.y}, &windowRect) == 1) {
         game->paper_plane.savedX = game->paper_plane.x;
         game->paper_plane.savedY = game->paper_plane.y;
@@ -157,10 +164,6 @@ void doPhysics(Game *game) {
     //Move Airplane Rect
     game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
     game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
-
-    //Distance between Plane and Mouse
-    plane_mouse_distance_x = (mouse.x - game->paper_plane.x);
-    plane_mouse_distance_y = (mouse.y - game->paper_plane.y);
 
     //Airplane Direction calculation
       //Direction Vectors
@@ -194,19 +197,11 @@ void doPhysics(Game *game) {
         }
     }
 
-    //AirPlane Movement Calculations when picked
-    if (game->paper_plane.is_picked == 1) {
-
-        game->paper_plane.dx = plane_mouse_distance_x / game->paper_plane.picked_drag;
-        game->paper_plane.dy = plane_mouse_distance_y / game->paper_plane.picked_drag;
-
-    }
-
     //Airplane Movement calculations when thrown
     if (game->paper_plane.is_thrown == 1) {        
 
-        game->paper_plane.dx = plane_mouse_distance_x / game->paper_plane.thrown_drag;
-        game->paper_plane.dy = plane_mouse_distance_y / game->paper_plane.thrown_drag;;
+        game->paper_plane.dx = -plane_mouse_distance_x / game->paper_plane.thrown_drag;
+        game->paper_plane.dy = -plane_mouse_distance_y / game->paper_plane.thrown_drag;;
 
         game->paper_plane.is_thrown = 0;
     }
