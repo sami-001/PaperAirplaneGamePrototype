@@ -32,6 +32,8 @@ typedef struct {
     int x;
     int y;
 
+    SDL_Point target_position;
+    SDL_Point redirect_point;
     //Saves position of last frame
     int savedX;
     int savedY;
@@ -49,6 +51,8 @@ typedef struct {
 
     //States
     int is_picked;
+    int is_aiming;
+    int is_redirecting;
     int is_thrown;
 
     //Direction
