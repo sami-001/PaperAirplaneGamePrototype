@@ -12,6 +12,8 @@ int _by;
 int bx;
 int by;
 
+// Never Nester ?????????????????????????????????????????????????????
+
 void cleanUp(Game *game) {
     //Free Sprites
     freeSprite(&game->paper_plane.sprite);
@@ -82,6 +84,8 @@ void initStats(Game *game) {
     game->paper_plane.x = 125;
     game->paper_plane.y = 125;
 
+    game->paper_plane.speed = 1; 
+
     game->paper_plane.target_position = (SDL_Point) {-1, -1};
     game->paper_plane.redirect_point = (SDL_Point) {-1, -1};
 
@@ -97,6 +101,7 @@ void initStats(Game *game) {
     game->paper_plane.friction = 0.07;
     game->paper_plane.friction_after_bounce = 0.2;
     game->paper_plane.thrown_drag = 7.5;
+
     game->paper_plane.min_delta_pos = 1.0; //If delta position is less that this, set it to 0. If not apply friction
 
     //Init airplane texture
@@ -134,7 +139,7 @@ void doRender(Game *game) {
         //Red line from plane to mouse
         SDL_SetRenderDrawColor(game->renderer, 225, 0, 0, 225);
 
-        for (float i = 0.0; i < 1; i += 0.1) {
+        for (float i = 0.0; i < 1; i += 0.01) {
             _bx = l1x*(1 - i) + l2x * i;
             _by = l1y*(1 - i) + l2y * i;
 
@@ -151,12 +156,6 @@ void doRender(Game *game) {
         }
     }
     SDL_RenderPresent(game->renderer);
-}
-
-void lerp(double var, double a, double b, double t) {
-    for (float i = 0.0; i < 1; i += t) {
-        var = (a)*(1 - i) + ((b) * i);
-    }
 }
 
 void doPhysics(Game *game) {
@@ -186,37 +185,47 @@ void doPhysics(Game *game) {
 
         game->paper_plane.target_position.x = -plane_mouse_distance_x + game->paper_plane.x;
         game->paper_plane.target_position.y = -plane_mouse_distance_y + game->paper_plane.y;
+        SDL_Log("Target | x : %i, y : %i", game->paper_plane.target_position.x, game->paper_plane.target_position.y);
     }
 
     //Redirect point
     if (game->paper_plane.is_redirecting == 1) {
         game->paper_plane.redirect_point.x = -plane_mouse_distance_x + game->paper_plane.x;
         game->paper_plane.redirect_point.y = -plane_mouse_distance_y + game->paper_plane.y;
+            SDL_Log("Redirect | x : %i, y : %i", game->paper_plane.redirect_point.x, game->paper_plane.redirect_point.y);
     }
 
     //Airplane Movement calculations when thrown
     if (game->paper_plane.is_thrown == 1) {        
         game->paper_plane.is_redirecting = 0;
         
-        for (float i = 0.0; i < 1; i += 0.1) {
+        float i = game->paper_plane.position_lerp_t;
+        
+        l1x = game->paper_plane.x*(1 - i) + game->paper_plane.redirect_point.x * i;
+        l1y = game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i;
 
-            game->paper_plane.x = game->paper_plane.x*(1 - i) + (bx * i);
-            game->paper_plane.y = game->paper_plane.y*(1 - i) + (by * i);
+        l2x = game->paper_plane.redirect_point.x*(1 - i) + game->paper_plane.target_position.x * i;
+        l2y = game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i;
 
-            //Move Airplane Rect
-            game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
-            game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+        bx = l1x*(1 - i) + l2x * i;
+        by = l1y*(1 - i) + l2y * i;
 
-            SDL_Log("x : %i, y : %i", game->paper_plane.x, game->paper_plane.y);
+        game->paper_plane.x = bx;
+        game->paper_plane.y = by;
+
+        //Move Airplane Rect
+        game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
+        game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+
+        game->paper_plane.position_lerp_t += game->deltaTime * game->paper_plane.speed; 
+
+        SDL_Log("x : %i, y : %i", game->paper_plane.x, game->paper_plane.y);
+
+        if (game->paper_plane.position_lerp_t >= 1.0) {
+            game->paper_plane.is_thrown = 0;
+            game->paper_plane.is_picked = 0;
+            game->paper_plane.position_lerp_t = 0;
         }
-
-        game->paper_plane.target_position.x = 0;
-        game->paper_plane.target_position.y = 0;
-        game->paper_plane.redirect_point.x = 0;
-        game->paper_plane.redirect_point.y = 0;
-
-        game->paper_plane.is_picked = 0;
-        game->paper_plane.is_thrown = 0;
     }
 
 }
@@ -260,10 +269,16 @@ int main(int argc, char *argv[]) {
 
     if (init(&game) == 1) {
 
+        game.lastTick = SDL_GetTicks();
+        game.deltaTime = 0;
+
         initStats(&game);
         while (processEvents(&game) == 1) {
+            game.startTick = SDL_GetTicks();
+            game.deltaTime = (game.startTick - game.lastTick) / 1000.0;
+            game.lastTick = SDL_GetTicks();
             doPhysics(&game);
-            doRender(&game);   
+            doRender(&game);  
         }
         cleanUp(&game);
     }

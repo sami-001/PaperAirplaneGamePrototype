@@ -34,12 +34,17 @@ typedef struct {
 
     SDL_Point target_position;
     SDL_Point redirect_point;
+
+    float position_lerp_t;
+
     //Saves position of last frame
     int savedX;
     int savedY;
 
     float dx;
     float dy;
+
+    float speed;
     
     float friction;
     float thrown_drag;
@@ -69,6 +74,8 @@ typedef struct {
     SDL_Renderer *renderer;
 
     Uint32 startTick;
+    Uint32 lastTick;
+    float deltaTime;
 
     PaperAirPlane paper_plane;
     
