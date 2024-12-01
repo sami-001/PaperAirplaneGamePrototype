@@ -140,19 +140,11 @@ void doRender(Game *game) {
         SDL_SetRenderDrawColor(game->renderer, 225, 0, 0, 225);
 
         for (float i = 0.0; i < 1; i += 0.01) {
-            _bx = l1x*(1 - i) + l2x * i;
-            _by = l1y*(1 - i) + l2y * i;
 
-            l1x = game->paper_plane.x*(1 - i) + game->paper_plane.redirect_point.x * i;
-            l1y = game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i;
-                 
-            l2x = game->paper_plane.redirect_point.x*(1 - i) + game->paper_plane.target_position.x * i;
-            l2y = game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i;
+            int bx1 = (game->paper_plane.x*(1 - i) + game->paper_plane.redirect_point.x * i)*(1 - i) + (game->paper_plane.redirect_point.x*(1 - i) + game->paper_plane.target_position.x * i) * i;
+            int by1 = (game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i)*(1 - i) + (game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i) * i;
 
-            bx = l1x*(1 - i) + l2x * i;
-            by = l1y*(1 - i) + l2y * i;
-
-            SDL_RenderDrawLine(game->renderer, _bx, _by, bx, by);
+            SDL_RenderDrawPoint(game->renderer, bx1, by1);
         }
     }
     SDL_RenderPresent(game->renderer);
@@ -169,62 +161,64 @@ void doPhysics(Game *game) {
     plane_mouse_distance_x = (mouse.x - game->paper_plane.x);
     plane_mouse_distance_y = (mouse.y - game->paper_plane.y);
 
-    //Airplane Direction calculation
-          //Direction Vectors
-    if ( fabs(game->paper_plane.dx) > 0.3) {
-        game->paper_plane.dir_x = (game->paper_plane.x + game->paper_plane.dx) - game->paper_plane.x;
-    }
-    if ( fabs(game->paper_plane.dy) > 0.3) {
-        game->paper_plane.dir_y = (game->paper_plane.y + game->paper_plane.dy) - game->paper_plane.y;
-    }
-      //Direction Angle
-    game->paper_plane.dir_angle = (atan2(game->paper_plane.dir_y, game->paper_plane.dir_x) * (180.0 / PI));
 
     //Aiming
     if (game->paper_plane.is_aiming == 1) {
+        if (!game->paper_plane.is_thrown) {
 
-        game->paper_plane.target_position.x = -plane_mouse_distance_x + game->paper_plane.x;
-        game->paper_plane.target_position.y = -plane_mouse_distance_y + game->paper_plane.y;
-        SDL_Log("Target | x : %i, y : %i", game->paper_plane.target_position.x, game->paper_plane.target_position.y);
+            game->paper_plane.target_position.x = -plane_mouse_distance_x + game->paper_plane.x;
+            game->paper_plane.target_position.y = -plane_mouse_distance_y + game->paper_plane.y;
+        }
     }
 
     //Redirect point
     if (game->paper_plane.is_redirecting == 1) {
-        game->paper_plane.redirect_point.x = -plane_mouse_distance_x + game->paper_plane.x;
-        game->paper_plane.redirect_point.y = -plane_mouse_distance_y + game->paper_plane.y;
-            SDL_Log("Redirect | x : %i, y : %i", game->paper_plane.redirect_point.x, game->paper_plane.redirect_point.y);
+        if (!game->paper_plane.is_thrown) {
+            game->paper_plane.redirect_point.x = -plane_mouse_distance_x + game->paper_plane.x;
+            game->paper_plane.redirect_point.y = -plane_mouse_distance_y + game->paper_plane.y;
+        }
     }
 
     //Airplane Movement calculations when thrown
     if (game->paper_plane.is_thrown == 1) {        
+        game->paper_plane.is_aiming = 0;
         game->paper_plane.is_redirecting = 0;
         
-        float i = game->paper_plane.position_lerp_t;
-        
-        l1x = game->paper_plane.x*(1 - i) + game->paper_plane.redirect_point.x * i;
-        l1y = game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i;
 
-        l2x = game->paper_plane.redirect_point.x*(1 - i) + game->paper_plane.target_position.x * i;
-        l2y = game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i;
+        float i = game->paper_plane.movement_progress;
+        float increment = 0.01;
+        if (game->paper_plane.movement_progress < 1.0f) {
+            float bx1 = (game->paper_plane.x*(1 - i) + game->paper_plane.redirect_point.x * i)*(1 - i) + (game->paper_plane.redirect_point.x*(1 - i) + game->paper_plane.target_position.x * i) * i;
+            float by1 = (game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i)*(1 - i) + (game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i) * i;
 
-        bx = l1x*(1 - i) + l2x * i;
-        by = l1y*(1 - i) + l2y * i;
+            //Direction Angle
+            if ( fabsf(bx1 - game->paper_plane.x) > 0.15) {
+                game->paper_plane.dir_x = (bx1 - game->paper_plane.x);
+            }
+            if ( fabsf(by1 - game->paper_plane.y) > 0.15) {
+                game->paper_plane.dir_y = (by1 - game->paper_plane.y);
+            }
+            game->paper_plane.dir_angle = (SDL_atan2((game->paper_plane.dir_y) , (game->paper_plane.dir_x)) * (180.0 / PI));
 
-        game->paper_plane.x = bx;
-        game->paper_plane.y = by;
+            game->paper_plane.x += (bx1 - game->paper_plane.x);
+            game->paper_plane.y += (by1 - game->paper_plane.y);
+            //Move Airplane Rect
+            game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
+            game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+            
+            //Direction
+            SDL_Log("x : %f, y : %f, r: %f\n", game->paper_plane.dir_x, game->paper_plane.dir_y, game->paper_plane.dir_angle);
+            SDL_Log("bx : %f, by : %f, px: %i\n", bx1, by1, game->paper_plane.x);
 
-        //Move Airplane Rect
-        game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
-        game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
 
-        game->paper_plane.position_lerp_t += game->deltaTime * game->paper_plane.speed; 
 
-        SDL_Log("x : %i, y : %i", game->paper_plane.x, game->paper_plane.y);
+            game->paper_plane.movement_progress += increment;
+        }
+        else {
 
-        if (game->paper_plane.position_lerp_t >= 1.0) {
+            game->paper_plane.movement_progress = 0;
             game->paper_plane.is_thrown = 0;
             game->paper_plane.is_picked = 0;
-            game->paper_plane.position_lerp_t = 0;
         }
     }
 

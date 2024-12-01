@@ -35,7 +35,7 @@ typedef struct {
     SDL_Point target_position;
     SDL_Point redirect_point;
 
-    float position_lerp_t;
+    float movement_progress;
 
     //Saves position of last frame
     int savedX;
