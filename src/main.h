@@ -25,9 +25,6 @@ float scaleY = (float)WINDOW_HEIGHT / (float)LOGICAL_W_HEIGHT;
 
 SDL_Point mouse;
 
-float plane_mouse_distance_x; 
-float  plane_mouse_distance_y;
-
 typedef struct {
     int x;
     int y;
@@ -36,21 +33,7 @@ typedef struct {
     SDL_Point redirect_point;
 
     float movement_progress;
-
-    //Saves position of last frame
-    int savedX;
-    int savedY;
-
-    float dx;
-    float dy;
-
-    float speed;
     
-    float friction;
-    float thrown_drag;
-    float min_delta_pos; //If delta position is less that this, set it to 0. If not apply friction
-    float friction_after_bounce;
-
     //Texture
     Sprite sprite;
 

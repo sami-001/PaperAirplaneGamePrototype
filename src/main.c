@@ -1,19 +1,5 @@
 #include "main.h"
 
-int l1x;
-int l1y;
-
-int l2x;
-int l2y;
-
-int _bx;
-int _by;
-  
-int bx;
-int by;
-
-// Never Nester ?????????????????????????????????????????????????????
-
 void cleanUp(Game *game) {
     //Free Sprites
     freeSprite(&game->paper_plane.sprite);
@@ -84,25 +70,13 @@ void initStats(Game *game) {
     game->paper_plane.x = 125;
     game->paper_plane.y = 125;
 
-    game->paper_plane.speed = 1; 
-
     game->paper_plane.target_position = (SDL_Point) {-1, -1};
     game->paper_plane.redirect_point = (SDL_Point) {-1, -1};
-
-    game->paper_plane.dx = 0;
-    game->paper_plane.dy = 0;
 
     //Init airplane direction
     game->paper_plane.dir_x = 0;
     game->paper_plane.dir_y = 0;
     game->paper_plane.dir_angle = 0;
-
-    //Init airplane Friction
-    game->paper_plane.friction = 0.07;
-    game->paper_plane.friction_after_bounce = 0.2;
-    game->paper_plane.thrown_drag = 7.5;
-
-    game->paper_plane.min_delta_pos = 1.0; //If delta position is less that this, set it to 0. If not apply friction
 
     //Init airplane texture
     initSprite(game->renderer, &game->paper_plane.sprite, "res/textures/paper_airplane.png", (SDL_Rect){0, 0, 16, 16});
@@ -158,24 +132,24 @@ void doPhysics(Game *game) {
     mouse.y = (mouse.y / (int)scaleY);
 
     //Distance between Plane and Mouse
-    plane_mouse_distance_x = (mouse.x - game->paper_plane.x);
-    plane_mouse_distance_y = (mouse.y - game->paper_plane.y);
+    float distance_to_mouse_x = (mouse.x - game->paper_plane.x);
+    float distance_to_mouse_y = (mouse.y - game->paper_plane.y);
 
 
     //Aiming
     if (game->paper_plane.is_aiming == 1) {
         if (!game->paper_plane.is_thrown) {
 
-            game->paper_plane.target_position.x = -plane_mouse_distance_x + game->paper_plane.x;
-            game->paper_plane.target_position.y = -plane_mouse_distance_y + game->paper_plane.y;
+            game->paper_plane.target_position.x = -distance_to_mouse_x + game->paper_plane.x;
+            game->paper_plane.target_position.y = -distance_to_mouse_y + game->paper_plane.y;
         }
     }
 
     //Redirect point
     if (game->paper_plane.is_redirecting == 1) {
         if (!game->paper_plane.is_thrown) {
-            game->paper_plane.redirect_point.x = -plane_mouse_distance_x + game->paper_plane.x;
-            game->paper_plane.redirect_point.y = -plane_mouse_distance_y + game->paper_plane.y;
+            game->paper_plane.redirect_point.x = -distance_to_mouse_x + game->paper_plane.x;
+            game->paper_plane.redirect_point.y = -distance_to_mouse_y + game->paper_plane.y;
         }
     }
 
