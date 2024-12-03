@@ -96,7 +96,7 @@ void doRender(Game *game) {
     game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
 
     //Render Dot
-    if (game->paper_plane.is_picked) {
+    if (game->paper_plane.is_thrown) {
         renderSprite(game->renderer, &game->dot, 1, 4, 1, 0, NULL, 0);
     }
     else {
@@ -166,25 +166,27 @@ void doPhysics(Game *game) {
             float by1 = (game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i)*(1 - i) + (game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i) * i;
 
             //Direction Angle
-            if ( fabsf(bx1 - game->paper_plane.x) > 0.15) {
+            float old_angle = game->paper_plane.dir_angle;
+            if ( fabsf(bx1 - game->paper_plane.x) > 0.2) {
                 game->paper_plane.dir_x = (bx1 - game->paper_plane.x);
             }
-            if ( fabsf(by1 - game->paper_plane.y) > 0.15) {
+            if ( fabsf(by1 - game->paper_plane.y) > 0.2) {
                 game->paper_plane.dir_y = (by1 - game->paper_plane.y);
             }
-            game->paper_plane.dir_angle = (SDL_atan2((game->paper_plane.dir_y) , (game->paper_plane.dir_x)) * (180.0 / PI));
+            float new_angle = (SDL_atan2((game->paper_plane.dir_y) , (game->paper_plane.dir_x)) * (180.0 / PI));
+            if (new_angle >= 360) new_angle -= 360;
+            if (new_angle > 0) new_angle -= 360;
+            float angle_diff = fabs(new_angle - old_angle);
 
-            game->paper_plane.x += (bx1 - game->paper_plane.x);
-            game->paper_plane.y += (by1 - game->paper_plane.y);
+            game->paper_plane.dir_angle = new_angle;
+
+            SDL_Log("%f", new_angle);
+
+            game->paper_plane.x = game->paper_plane.x * (1 - i) + (bx1 * i);
+            game->paper_plane.y = game->paper_plane.y * (1 - i) + (by1 * i);
             //Move Airplane Rect
             game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
             game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
-            
-            //Direction
-            SDL_Log("x : %f, y : %f, r: %f\n", game->paper_plane.dir_x, game->paper_plane.dir_y, game->paper_plane.dir_angle);
-            SDL_Log("bx : %f, by : %f, px: %i\n", bx1, by1, game->paper_plane.x);
-
-
 
             game->paper_plane.movement_progress += increment;
         }
