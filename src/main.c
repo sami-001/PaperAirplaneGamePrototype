@@ -90,10 +90,12 @@ void doRender(Game *game) {
     SDL_RenderClear(game->renderer);
 
     renderSprite(game->renderer, &game->paper_plane.sprite, 1, 2, 1, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE);
-
     //Move Airplane Rect
     game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
     game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+
+    SDL_SetRenderDrawColor(game->renderer, 111, 111, 111, 255);
+    SDL_RenderDrawRect(game->renderer, &windowRect);
 
     //Render Dot
     if (game->paper_plane.is_thrown) {
@@ -154,47 +156,54 @@ void doPhysics(Game *game) {
     }
 
     //Airplane Movement calculations when thrown
-    if (game->paper_plane.is_thrown == 1) {        
+    if (game->paper_plane.is_thrown == 1) { 
+
         game->paper_plane.is_aiming = 0;
         game->paper_plane.is_redirecting = 0;
-        
 
-        float i = game->paper_plane.movement_progress;
-        float increment = 0.01;
-        if (game->paper_plane.movement_progress < 1.0f) {
-            float bx1 = (game->paper_plane.x*(1 - i) + game->paper_plane.redirect_point.x * i)*(1 - i) + (game->paper_plane.redirect_point.x*(1 - i) + game->paper_plane.target_position.x * i) * i;
-            float by1 = (game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i)*(1 - i) + (game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i) * i;
-
-            //Direction Angle
-            float old_angle = game->paper_plane.dir_angle;
-            if ( fabsf(bx1 - game->paper_plane.x) > 0.2) {
-                game->paper_plane.dir_x = (bx1 - game->paper_plane.x);
-            }
-            if ( fabsf(by1 - game->paper_plane.y) > 0.2) {
-                game->paper_plane.dir_y = (by1 - game->paper_plane.y);
-            }
-            float new_angle = (SDL_atan2((game->paper_plane.dir_y) , (game->paper_plane.dir_x)) * (180.0 / PI));
-            if (new_angle >= 360) new_angle -= 360;
-            if (new_angle > 0) new_angle -= 360;
-            float angle_diff = fabs(new_angle - old_angle);
-
-            game->paper_plane.dir_angle = new_angle;
-
-            SDL_Log("%f", new_angle);
-
-            game->paper_plane.x = game->paper_plane.x * (1 - i) + (bx1 * i);
-            game->paper_plane.y = game->paper_plane.y * (1 - i) + (by1 * i);
-            //Move Airplane Rect
-            game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
-            game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
-
-            game->paper_plane.movement_progress += increment;
-        }
-        else {
-
-            game->paper_plane.movement_progress = 0;
+        if (!SDL_PointInRect(&game->paper_plane.target_position, &windowRect)) {
             game->paper_plane.is_thrown = 0;
             game->paper_plane.is_picked = 0;
+        }
+        else {
+            
+            float i = game->paper_plane.movement_progress;
+            float increment = 0.01;
+            if (game->paper_plane.movement_progress < 1.0f) {
+                float bx1 = (game->paper_plane.x*(1 - i) + game->paper_plane.redirect_point.x * i)*(1 - i) + (game->paper_plane.redirect_point.x*(1 - i) + game->paper_plane.target_position.x * i) * i;
+                float by1 = (game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i)*(1 - i) + (game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i) * i;
+
+                //Direction Angle
+                float old_angle = game->paper_plane.dir_angle;
+                if ( fabsf(bx1 - game->paper_plane.x) > 0.2) {
+                    game->paper_plane.dir_x = (bx1 - game->paper_plane.x);
+                }
+                if ( fabsf(by1 - game->paper_plane.y) > 0.2) {
+                    game->paper_plane.dir_y = (by1 - game->paper_plane.y);
+                }
+                float new_angle = (SDL_atan2((game->paper_plane.dir_y) , (game->paper_plane.dir_x)) * (180.0 / PI));
+                if (new_angle >= 360) new_angle -= 360;
+                if (new_angle > 0) new_angle -= 360;
+                float angle_diff = fabs(new_angle - old_angle);
+
+                game->paper_plane.dir_angle = new_angle;
+
+                SDL_Log("%f", new_angle);
+
+                game->paper_plane.x = game->paper_plane.x * (1 - i) + (bx1 * i);
+                game->paper_plane.y = game->paper_plane.y * (1 - i) + (by1 * i);
+                //Move Airplane Rect
+                game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
+                game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+
+                game->paper_plane.movement_progress += increment;
+            }
+            else {
+
+                game->paper_plane.movement_progress = 0;
+                game->paper_plane.is_thrown = 0;
+                game->paper_plane.is_picked = 0;
+            }
         }
     }
 
