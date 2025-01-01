@@ -81,7 +81,6 @@ void initStats(Game *game) {
     //Init airplane texture
     initSprite(game->renderer, &game->paper_plane.sprite, "res/textures/paper_airplane.png", (SDL_Rect){0, 0, 16, 16});
     initSprite(game->renderer, &game->dot, "res/textures/Sprite-0001.png", (SDL_Rect){0, 0, 16, 16});
-    game->dot.rect = (SDL_Rect){100, 123, 16, 16};
 }
 
 void doRender(Game *game) {
@@ -89,14 +88,11 @@ void doRender(Game *game) {
     SDL_SetRenderDrawColor(game->renderer, 1, 1, 1, 225);
     SDL_RenderClear(game->renderer);
 
-    renderSprite(game->renderer, &game->paper_plane.sprite, 1, 2, 1, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE);
-    //Move Airplane Rect
-    game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
-    game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+    game->dot.rect.x = mouse.x - 8;
+    game->dot.rect.y = mouse.y - 8;
 
     SDL_SetRenderDrawColor(game->renderer, 111, 111, 111, 255);
     SDL_RenderDrawRect(game->renderer, &windowRect);
-
     //Render Dot
     if (game->paper_plane.is_thrown) {
         renderSprite(game->renderer, &game->dot, 1, 4, 1, 0, NULL, 0);
@@ -104,6 +100,14 @@ void doRender(Game *game) {
     else {
         renderSprite(game->renderer, &game->dot, 3, 3, 1, 0, NULL, 0);
     }
+
+    //Render Plane Sprite
+    renderSprite(game->renderer, &game->paper_plane.sprite, 1, 2, 1, game->paper_plane.dir_angle, NULL, SDL_FLIP_NONE);
+    //Move Airplane Rect
+    game->paper_plane.sprite.rect.x = game->paper_plane.x - (game->paper_plane.sprite.rect.w / 2);
+    game->paper_plane.sprite.rect.y = game->paper_plane.y - (game->paper_plane.sprite.rect.h / 2);
+
+
 
     if (game->paper_plane.is_aiming == 1) {
         //Red line from plane to mouse
@@ -168,11 +172,12 @@ void doPhysics(Game *game) {
         else {
             
             float i = game->paper_plane.movement_progress;
-            float increment = 0.01;
+            float increment = 0.025;
             if (game->paper_plane.movement_progress < 1.0f) {
                 float bx1 = (game->paper_plane.x*(1 - i) + game->paper_plane.redirect_point.x * i)*(1 - i) + (game->paper_plane.redirect_point.x*(1 - i) + game->paper_plane.target_position.x * i) * i;
                 float by1 = (game->paper_plane.y*(1 - i) + game->paper_plane.redirect_point.y * i)*(1 - i) + (game->paper_plane.redirect_point.y*(1 - i) + game->paper_plane.target_position.y * i) * i;
 
+                increment = increment*(1 - i) + 0.008*(i);
                 //Direction Angle
                 float old_angle = game->paper_plane.dir_angle;
                 if ( fabsf(bx1 - game->paper_plane.x) > 0.2) {
@@ -188,8 +193,6 @@ void doPhysics(Game *game) {
 
                 game->paper_plane.dir_angle = new_angle;
 
-                SDL_Log("%f", new_angle);
-
                 game->paper_plane.x = game->paper_plane.x * (1 - i) + (bx1 * i);
                 game->paper_plane.y = game->paper_plane.y * (1 - i) + (by1 * i);
                 //Move Airplane Rect
@@ -199,14 +202,13 @@ void doPhysics(Game *game) {
                 game->paper_plane.movement_progress += increment;
             }
             else {
-
+                increment = 0.001;
                 game->paper_plane.movement_progress = 0;
                 game->paper_plane.is_thrown = 0;
                 game->paper_plane.is_picked = 0;
             }
         }
     }
-
 }
 
 int processEvents(Game *game) {
