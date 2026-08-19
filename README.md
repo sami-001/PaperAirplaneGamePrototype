@@ -1,6 +1,8 @@
 # Personal Project
 ## Game Prototype & First SDL2 Project
 
+---
+
 ### Notes for Project
 
 #### > Learning SDL2 (Simple DirectMedia Layer) for rendering graphics & sprites in the C language
@@ -9,8 +11,15 @@
 
 #### > Usage of .h (header) files with the C Language
 
+---
 
 
+## Installation
+
+Open the Project folder in the terminal, and write the following command:
+```
+make
+```
 
 
 
