@@ -11,6 +11,8 @@
 
 #### > Usage of .h (header) files with the C Language
 
+#### > Quadratic Bézier Curve logic & Linear Interpolation (lerp)
+
 ---
 
 
